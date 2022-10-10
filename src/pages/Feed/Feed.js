@@ -52,7 +52,7 @@ class Feed extends Component {
     }
     const graphqlQuery =
       `query{
-        posts{
+        posts(page: ${page}){
           posts{
             _id
             title
@@ -189,6 +189,7 @@ class Feed extends Component {
             );
             updatedPosts[postIndex] = post;
           } else {
+            updatedPosts.pop();// to make new elements added show in front
             updatedPosts.unshift(post);
           }
           return {
