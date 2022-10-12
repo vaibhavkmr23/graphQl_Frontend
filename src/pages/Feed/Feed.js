@@ -204,7 +204,7 @@ class Feed extends Component {
           throw new Error("Validation failed. Make sure Email isnt used yet!")
         }
         if (resData.errors) {
-          throw new Error("User Login Failed!")
+          throw new Error("Not Authorised!")
         }
         console.log(resData);
 
@@ -258,19 +258,26 @@ class Feed extends Component {
 
   deletePostHandler = postId => {
     this.setState({ postsLoading: true });
-    fetch('http://localhost:8080/feed/post/' + postId, {
-      method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + this.props.token
+    const graphqlQuery =
+      `mutation{
+        deletePost(id: "${postId}")
       }
+      `;
+    fetch('http://localhost:8080/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + this.props.token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query: graphqlQuery })
     })
       .then(res => {
-        if (res.status !== 200 && res.status !== 201) {
-          throw new Error('Deleting a post failed!');
-        }
         return res.json();
       })
       .then(resData => {
+        if (resData.errors) {
+          throw new Error("Deleting Post Failed!")
+        }
         console.log(resData);
         this.loadPosts();
         // this.setState(prevState => {
