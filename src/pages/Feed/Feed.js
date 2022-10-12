@@ -149,7 +149,11 @@ class Feed extends Component {
       body: formData
     }).then(res => res.json())
       .then(fileResData => {
-        const imageUrl = fileResData.filePath.replace('\\', '/');// do replace else will give error on windows due to toLocal format
+        // just to solve the bug when image is not selected while updating
+        let imageUrl = fileResData.filePath;
+        if (imageUrl) {
+          imageUrl = imageUrl.replace('\\', '/');// do replace else will give error on windows due to toLocal format
+        }
         let graphqlQuery =
           `mutation{
             createPost( postInput:{title: "${postData.title}",content: "${postData.content}", imageUrl: "${imageUrl}"}){
