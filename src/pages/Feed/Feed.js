@@ -22,20 +22,23 @@ class Feed extends Component {
   };
 
   componentDidMount() {
-    const graphqlQuery =
-      `query {
+    const graphqlQuery = {
+      query:
+        `query{
         user {
           status
         }
       }
-      `;
+      `
+    }
+      ;
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + this.props.token,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ query: graphqlQuery })
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
         return res.json();
@@ -64,23 +67,28 @@ class Feed extends Component {
       page--;
       this.setState({ postPage: page });
     }
-    const graphqlQuery =
-      `query{
-        posts(page: ${page}){
-          posts{
-            _id
-            title
-            content
-            imageUrl
-            creator {
-              name
+    const graphqlQuery = {
+      query:
+        `query FetchPosts($page: Int){
+          posts(page: $page){
+            posts{
+              _id
+              title
+              content
+              imageUrl
+              creator {
+                name
+              }
+              createdAt
             }
-            createdAt
+            totalPosts
           }
-          totalPosts
-        }
+      }
+    `,
+      variables: {
+        page: page
+      }
     }
-    `
 
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
@@ -88,7 +96,7 @@ class Feed extends Component {
         Authorization: 'Bearer ' + this.props.token,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ query: graphqlQuery })
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
         return res.json();
@@ -113,21 +121,27 @@ class Feed extends Component {
 
   statusUpdateHandler = event => {
     event.preventDefault();
-    const graphqlQuery =
-    `
-      mutation {
-        updateStatus(status: "${this.state.status}"){
-          status
-        }
+    const graphqlQuery = {
+      query:
+        ` 
+          mutation UpdateUserStatus($userStatus: String!) {
+            updateStatus(status: "$userStatus"){
+              status
+            }
+          }
+        `,
+      variables: {
+        userStatus: this.state.status
       }
-    `
+    }
+
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
-      headers:{
+      headers: {
         Authorization: 'Bearer ' + this.props.token,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ query: graphqlQuery})
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
         return res.json();
@@ -179,29 +193,14 @@ class Feed extends Component {
     }).then(res => res.json())
       .then(fileResData => {
         // just to solve the bug when image is not selected while updating
-        let imageUrl = fileResData.filePath;
+        let imageUrl = fileResData.filePath || 'undefined';
         if (imageUrl) {
           imageUrl = imageUrl.replace('\\', '/');// do replace else will give error on windows due to toLocal format
         }
-        let graphqlQuery =
-          `mutation{
-            createPost( postInput:{title: "${postData.title}",content: "${postData.content}", imageUrl: "${imageUrl}"}){
-              _id
-              title
-              content
-              imageUrl
-              creator {
-                name
-              }
-              createdAt 
-              
-            }
-          }`;
-
-        if (this.state.editPost) {
-          graphqlQuery =
-            `mutation{
-              updatePost(id: "${this.state.editPost._id}", postInput:{title: "${postData.title}",content: "${postData.content}", imageUrl: "${imageUrl}"}){
+        let graphqlQuery = {
+          query:
+            `mutation CreateNewPost($title: String!, $content: String!, $imageUrl: String!){
+              createPost( postInput:{title: $title, content: $content, imageUrl: $imageUrl}){
                 _id
                 title
                 content
@@ -209,16 +208,46 @@ class Feed extends Component {
                 creator {
                   name
                 }
-                createdAt
+                createdAt 
                 
               }
-          }`;
+            }`,
+          variables: {
+            title: postData.title,
+            content: postData.content,
+            imageUrl: imageUrl
+          }
+        };
+        if (this.state.editPost) {
+          graphqlQuery = {
+            query:
+              `mutation UpdateExistingPost($postId: ID!, $title: String!, $content: String!, $imageUrl: String!){
+                updatePost(id: $postId, postInput:{title: $title,content: $content, imageUrl: $imageUrl}){
+                  _id
+                  title
+                  content
+                  imageUrl
+                  creator {
+                    name
+                  }
+                  createdAt
+                  
+                }
+              }`,
+              variables: {
+                postId: this.state.editPost._id,
+                title: postData.title,
+                content: postData.content,
+                imageUrl: imageUrl
+              }
+          }
+            ;
 
         }
 
         return fetch('http://localhost:8080/graphql', {
           method: 'POST',
-          body: JSON.stringify({ query: graphqlQuery }),
+          body: JSON.stringify(graphqlQuery),
           headers: {
             Authorization: 'Bearer ' + this.props.token,
             'Content-Type': 'application/json'
